@@ -1,0 +1,62 @@
+OpenACC
+
+data constract
+: when meeting a data constract, the program creates a data region. The data region is accessable until exiting the data region. 
+1. directive : 
+最常用的数据构建指令包括：
+
+#pragma acc data：创建显式数据区域
+
+#pragma acc enter data 和 #pragma acc exit data：分别用于开始和结束数据区域
+
+#pragma acc declare：声明数据的长期设备存在
+
+
+compute construct { parallel , kernels} 
+
+
+对比两种方式：
+方法一：使用 #pragma acc data create(...) 
+分配和释放在 data region 的开始和结束时自动进行。
+可以跨多个计算区域共享
+
+不需要手动释放，只要退出了 data 区域。
+
+方法二：使用 acc_create() 或 acc_malloc()
+会在设备上分配内存，但不会自动释放。
+
+你必须使用 acc_delete() 或 acc_free() 来释放
+
+
+#pragma acc enter data create(a[0:N])
+// ... 做一些处理 ...
+#pragma acc exit data delete(a[0:N]) // ✅ 你需要自己释放内存
+
+routine 本质上就是告诉编译器：请生成一个 GPU 版本，但不会影响原有的 CPU 使用方式
+routine seq 是什么？
+seq 表示该函数在设备端是 串行执行（sequential execution）
+适用于不能并行、包含分支或递归的函数？，或用于被并行区域内调用的辅助函数
+routine 的函数不能有 printf，除非设备支持
+
+routine 中不能再用 #pragma acc（除非是更复杂的用法）
+
+必须在 被调用前就已声明 routine（放在头部）
+
+#pragma acc routine seq device_type(host)   // 仅 CPU 上使用。
+#pragma acc routine seq device_type(nvidia) // 仅为 NVIDIA GPU 编译
+
+
+在 OpenACC + 单线程 + GPU 的组合下，gang / worker / vector 并行方式是否还能发挥作用？
+最后建议
+只要你使用了 GPU，并在 GPU 上执行计算，即使 host 是单线程，也可以放心使用 gang / worker / vector 并行。
+
+如果你担心是否真的在 GPU 上跑，可以加上 -Minfo=accel 看编译提示。
+
+想让多个 CPU 线程各自 offload GPU kernel，可搭配 OpenMP + OpenACC 或使用 pthread + acc_set_device_num()。
+
+
+
+
+
+
+
